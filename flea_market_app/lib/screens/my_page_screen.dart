@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'profile_view_screen.dart';
 import 'profile_edit_screen.dart';
-import 'personal_info_screen.dart';
+import 'personal_info_view_screen.dart';
 import 'sales_management_screen.dart';
 import 'purchase_history_screen.dart';
 import 'chat_history_screen.dart';
@@ -35,11 +35,11 @@ class MyPageScreen extends StatelessWidget {
             },
           ),
           ListTile(
-            title: Text('個人情報確認＆更新'),
+            title: Text('個人情報確認'),
             onTap: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => PersonalInfoScreen()),
+                MaterialPageRoute(builder: (context) => PersonalInfoViewScreen()),
               );
             },
           ),

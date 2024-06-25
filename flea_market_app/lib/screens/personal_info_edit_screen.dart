@@ -3,14 +3,15 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../db_helper.dart';
 import '../models/user.dart';
 
-class PersonalInfoScreen extends StatefulWidget {
+class PersonalInfoEditScreen extends StatefulWidget {
   @override
-  _PersonalInfoScreenState createState() => _PersonalInfoScreenState();
+  _PersonalInfoEditScreenState createState() => _PersonalInfoEditScreenState();
 }
 
-class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
+class _PersonalInfoEditScreenState extends State<PersonalInfoEditScreen> {
   final _formKey = GlobalKey<FormState>();
   final dbHelper = DatabaseHelper();
+  String _email = '';
   String _address = '';
   String _phoneNumber = '';
   bool _isLoading = false;
@@ -18,16 +19,17 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
   @override
   void initState() {
     super.initState();
-    _loadPersonalInfo();
+    _loadUserInfo();
   }
 
-  Future<void> _loadPersonalInfo() async {
+  Future<void> _loadUserInfo() async {
     final prefs = await SharedPreferences.getInstance();
     final email = prefs.getString('email');
     if (email != null) {
       final user = await dbHelper.fetchUserByEmail(email);
       if (user != null) {
         setState(() {
+          _email = user.email;
           _address = user.address;
           _phoneNumber = user.phoneNumber;
         });
@@ -35,24 +37,24 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
     }
   }
 
-  Future<void> _updatePersonalInfo() async {
+  Future<void> _updateUserInfo() async {
     if (_formKey.currentState!.validate()) {
       setState(() {
         _isLoading = true;
       });
 
       final prefs = await SharedPreferences.getInstance();
-      final email = prefs.getString('email');
-      if (email != null) {
+      final currentEmail = prefs.getString('email');
+      if (currentEmail != null) {
         final user = User()
-          ..username = ''
-          ..email = email
-          ..bio = ''
-          ..profileImage = ''
+          ..email = _email
           ..address = _address
-          ..phoneNumber = _phoneNumber
-          ..likeCount = 0;
+          ..phoneNumber = _phoneNumber;
+
         await dbHelper.updateUser(user);
+
+        prefs.setString('email', _email);
+
         Navigator.of(context).pop();
       }
 
@@ -66,7 +68,7 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('個人情報確認＆更新'),
+        title: Text('個人情報更新'),
       ),
       body: Padding(
         padding: EdgeInsets.all(16.0),
@@ -74,6 +76,19 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
           key: _formKey,
           child: ListView(
             children: <Widget>[
+              TextFormField(
+                decoration: InputDecoration(labelText: 'メールアドレス'),
+                initialValue: _email,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'メールアドレスを入力してください';
+                  }
+                  return null;
+                },
+                onSaved: (value) {
+                  _email = value!;
+                },
+              ),
               TextFormField(
                 decoration: InputDecoration(labelText: '住所'),
                 initialValue: _address,
@@ -107,7 +122,7 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
                       onPressed: () {
                         if (_formKey.currentState!.validate()) {
                           _formKey.currentState!.save();
-                          _updatePersonalInfo();
+                          _updateUserInfo();
                         }
                       },
                       child: Text('更新'),

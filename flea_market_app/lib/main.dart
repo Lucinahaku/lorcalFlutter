@@ -7,7 +7,7 @@ import 'screens/login_screen.dart';
 import 'screens/register_screen.dart';
 import 'screens/profile_view_screen.dart';
 import 'screens/profile_edit_screen.dart';
-import 'screens/personal_info_screen.dart';
+import 'screens/personal_info_view_screen.dart';
 import 'screens/sales_management_screen.dart';
 import 'screens/purchase_history_screen.dart';
 import 'screens/chat_history_screen.dart';
@@ -47,7 +47,7 @@ class MyApp extends StatelessWidget {
         '/home': (context) => MainScreen(),
         '/profile_view': (context) => ProfileViewScreen(),
         '/profile_edit': (context) => ProfileEditScreen(),
-        '/personal_info': (context) => PersonalInfoScreen(),
+        '/personal_info': (context) => PersonalInfoViewScreen(),
         '/sales_management': (context) => SalesManagementScreen(),
         '/purchase_history': (context) => PurchaseHistoryScreen(),
         '/chat_history': (context) => ChatHistoryScreen(),
