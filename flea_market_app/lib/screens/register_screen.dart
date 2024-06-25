@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:http/http.dart' as http;
+import 'dart:convert'; // Base64エンコード用
+import 'dart:io';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../db_helper.dart';
 import '../models/user.dart';
-import 'dart:io';
-import 'dart:convert';
 
 class RegisterScreen extends StatefulWidget {
   @override
@@ -13,15 +13,27 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
-  final dbHelper = DatabaseHelper();
-  String _name = '';
-  String _password = '';
+  String _username = '';
   String _email = '';
+  String _password = '';
   String _address = '';
   String _phone = '';
   String _bio = '';
-  String? _profileImageUrl;
+  String? _profileImageBase64;
   bool _isLoading = false;
+
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.getImage(source: ImageSource.gallery);
+
+    if (pickedFile != null) {
+      final bytes = await pickedFile.readAsBytes();
+      final base64Image = base64Encode(bytes);
+      setState(() {
+        _profileImageBase64 = base64Image;
+      });
+    }
+  }
 
   Future<void> _register() async {
     if (_formKey.currentState!.validate()) {
@@ -29,96 +41,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
         _isLoading = true;
       });
 
-      try {
-        var user = User()
-          ..username = _name
-          ..email = _email
-          ..password = _password
-          ..profileImage = _profileImageUrl ?? ''
-          ..bio = _bio
-          ..address = _address
-          ..phoneNumber = _phone
-          ..likeCount = 0;
-        await dbHelper.insertUser(user);
-        _showSuccessDialog();
-      } catch (e) {
-        _showErrorDialog('登録に失敗しました。もう一度お試しください。');
-      } finally {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
-  }
+      final newUser = User()
+        ..username = _username
+        ..email = _email
+        ..password = _password
+        ..profileImage = _profileImageBase64 ?? ''
+        ..bio = _bio
+        ..likeCount = 0
+        ..address = _address
+        ..phoneNumber = _phone;
 
-  void _showSuccessDialog() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('登録成功'),
-          content: Text('新規登録が完了しました！'),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                Navigator.of(context).pop(); // ログイン画面に戻る
-              },
-              child: Text('OK'),
-            ),
-          ],
-        );
-      },
-    );
-  }
+      await DatabaseHelper().insertUser(newUser);
 
-  void _showErrorDialog(String message) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('登録失敗'),
-          content: Text(message),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: Text('閉じる'),
-            ),
-          ],
-        );
-      },
-    );
-  }
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('email', _email);
 
-  Future<void> _pickImage() async {
-    final pickedFile = await ImagePicker().getImage(source: ImageSource.gallery);
-    if (pickedFile != null) {
-      final url = await _uploadImage(File(pickedFile.path));
-      if (url != null) {
-        setState(() {
-          _profileImageUrl = url;
-        });
-      }
-    }
-  }
+      setState(() => _isLoading = false);
+      // Remove the extra closing parenthesis
 
-  Future<String?> _uploadImage(File imageFile) async {
-    final request = http.MultipartRequest(
-      'POST',
-      Uri.parse('YOUR_SERVER_UPLOAD_URL'), // 画像をアップロードするサーバーのURL
-    );
-    request.files.add(await http.MultipartFile.fromPath('image', imageFile.path));
-
-    final response = await request.send();
-    if (response.statusCode == 200) {
-      final responseBody = await response.stream.bytesToString();
-      final jsonResponse = json.decode(responseBody);
-      return jsonResponse['url']; // サーバーから返された画像のURLを取得
-    } else {
-      _showErrorDialog('画像のアップロードに失敗しました。');
-      return null;
+      Navigator.of(context).pushReplacementNamed('/login');
     }
   }
 
@@ -129,11 +70,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
         title: Text('新規登録'),
       ),
       body: Padding(
-        padding: EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(16.0),
         child: Form(
           key: _formKey,
           child: ListView(
             children: <Widget>[
+              GestureDetector(
+                onTap: _pickImage,
+                child: Container(
+                  height: 150,
+                  width: 150,
+                  color: Colors.grey[300],
+                  child: _profileImageBase64 == null
+                      ? Icon(Icons.camera_alt, size: 50)
+                      : Image.memory(base64Decode(_profileImageBase64!),
+                          fit: BoxFit.cover),
+                ),
+              ),
+              SizedBox(height: 16),
               TextFormField(
                 decoration: InputDecoration(labelText: 'ユーザー名'),
                 validator: (value) {
@@ -143,7 +97,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   return null;
                 },
                 onSaved: (value) {
-                  _name = value!;
+                  _username = value!;
                 },
               ),
               TextFormField(
@@ -207,15 +161,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   _bio = value!;
                 },
               ),
-              SizedBox(height: 10),
-              _profileImageUrl != null
-                  ? Image.network(_profileImageUrl!)
-                  : Icon(Icons.person, size: 100),
-              TextButton(
-                onPressed: _pickImage,
-                child: Text('アカウント画像を選択'),
-              ),
-              SizedBox(height: 20),
+              SizedBox(height: 16),
               _isLoading
                   ? Center(child: CircularProgressIndicator())
                   : ElevatedButton(

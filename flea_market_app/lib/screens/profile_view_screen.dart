@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import '../db_helper.dart';
 import '../models/user.dart';
+import '../models/product.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert'; // Base64デコード用
 
 class ProfileViewScreen extends StatelessWidget {
   final dbHelper = DatabaseHelper();
@@ -13,6 +15,11 @@ class ProfileViewScreen extends StatelessWidget {
       return await dbHelper.fetchUserByEmail(email);
     }
     return null;
+  }
+
+  Future<List<Product>> _getUserProducts(String email) async {
+    final products = await dbHelper.fetchProducts();
+    return products.where((product) => product.sellerEmail == email).toList();
   }
 
   @override
@@ -42,7 +49,14 @@ class ProfileViewScreen extends StatelessWidget {
                       if (user.profileImage.isNotEmpty)
                         CircleAvatar(
                           radius: 50,
-                          backgroundImage: NetworkImage(user.profileImage),
+                          backgroundImage:
+                              MemoryImage(base64Decode(user.profileImage)),
+                          onBackgroundImageError: (_, __) {
+                            // Base64デコードエラー処理
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('画像のデコードに失敗しました')),
+                            );
+                          },
                         )
                       else
                         CircleAvatar(
@@ -91,29 +105,59 @@ class ProfileViewScreen extends StatelessWidget {
                   Text(user.bio),
                   SizedBox(height: 16),
                   Expanded(
-                    child: GridView.builder(
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 3,
-                        childAspectRatio: 0.75,
-                        crossAxisSpacing: 8,
-                        mainAxisSpacing: 8,
-                      ),
-                      itemCount: 6, // この部分はデータソースの長さに変更してください
-                      itemBuilder: (BuildContext context, int index) {
-                        return Column(
-                          children: [
-                            Image.network(
-                              'https://example.com/your-image-url', // 実際の画像URLに置き換えてください
-                              fit: BoxFit.cover,
-                              width: 100,
-                              height: 100,
+                    child: FutureBuilder<List<Product>>(
+                      future: _getUserProducts(user.email),
+                      builder: (BuildContext context,
+                          AsyncSnapshot<List<Product>> productSnapshot) {
+                        if (productSnapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return Center(child: CircularProgressIndicator());
+                        } else if (productSnapshot.hasError) {
+                          return Center(child: Text('エラーが発生しました'));
+                        } else if (!productSnapshot.hasData ||
+                            productSnapshot.data!.isEmpty) {
+                          return Center(child: Text('出品された商品がありません'));
+                        } else {
+                          final products = productSnapshot.data!;
+                          return GridView.builder(
+                            gridDelegate:
+                                SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 3,
+                              childAspectRatio: 0.75,
+                              crossAxisSpacing: 8,
+                              mainAxisSpacing: 8,
                             ),
-                            SizedBox(height: 4),
-                            Text('5000¥'),
-                            Text('SOLD OUT',
-                                style: TextStyle(color: Colors.red)),
-                          ],
-                        );
+                            itemCount: products.length,
+                            itemBuilder: (BuildContext context, int index) {
+                              final product = products[index];
+                              return Column(
+                                children: [
+                                  Image.memory(
+                                    base64Decode(product.imageUrl),
+                                    fit: BoxFit.cover,
+                                    width: 100,
+                                    height: 100,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      // Base64デコードエラー処理
+                                      return Container(
+                                        width: 100,
+                                        height: 100,
+                                        color: Colors.grey,
+                                        child: Icon(Icons.broken_image),
+                                      );
+                                    },
+                                  ),
+                                  SizedBox(height: 4),
+                                  Text('${product.price}¥'),
+                                  Text(
+                                    'SOLD OUT',
+                                    style: TextStyle(color: Colors.red),
+                                  ),
+                                ],
+                              );
+                            },
+                          );
+                        }
                       },
                     ),
                   ),

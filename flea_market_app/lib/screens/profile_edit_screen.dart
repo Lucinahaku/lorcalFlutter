@@ -3,7 +3,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../db_helper.dart';
 import '../models/user.dart';
-import 'dart:io';
+import 'dart:convert'; // for base64 encoding
 
 class ProfileEditScreen extends StatefulWidget {
   @override
@@ -15,16 +15,16 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   final dbHelper = DatabaseHelper();
   String _username = '';
   String _bio = '';
-  String? _profileImagePath;
+  String? _profileImageBase64;
   bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    _loadUserProfile();
+    _loadUserInfo();
   }
 
-  Future<void> _loadUserProfile() async {
+  Future<void> _loadUserInfo() async {
     final prefs = await SharedPreferences.getInstance();
     final email = prefs.getString('email');
     if (email != null) {
@@ -33,9 +33,22 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         setState(() {
           _username = user.username;
           _bio = user.bio;
-          _profileImagePath = user.profileImage;
+          _profileImageBase64 = user.profileImage;
         });
       }
+    }
+  }
+
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.getImage(source: ImageSource.gallery);
+
+    if (pickedFile != null) {
+      final bytes = await pickedFile.readAsBytes();
+      final base64Image = base64Encode(bytes);
+      setState(() {
+        _profileImageBase64 = base64Image;
+      });
     }
   }
 
@@ -45,34 +58,36 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         _isLoading = true;
       });
 
-      final prefs = await SharedPreferences.getInstance();
-      final email = prefs.getString('email');
-      if (email != null) {
-        final user = User()
-          ..username = _username
-          ..email = email
-          ..bio = _bio
-          ..profileImage = _profileImagePath ?? ''
-          ..address = ''
-          ..phoneNumber = ''
-          ..likeCount = 0;
-        await dbHelper.updateUser(user);
-        Navigator.of(context).pop();
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final email = prefs.getString('email');
+        if (email != null) {
+          final user = User()
+            ..email = email
+            ..username = _username
+            ..bio = _bio
+            ..profileImage = _profileImageBase64 ?? ''
+            ..password = ''; // パスワードを空の文字列として初期化
+
+          await dbHelper.updateUser(user);
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('プロフィールが更新されました')),
+          );
+
+          Navigator.of(context).pop();
+        } else {
+          throw Exception('ユーザーのメールアドレスが見つかりません');
+        }
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('更新中にエラーが発生しました: $e')),
+        );
+      } finally {
+        setState(() {
+          _isLoading = false;
+        });
       }
-
-      setState(() {
-        _isLoading = false;
-      });
-    }
-  }
-
-  Future<void> _pickImage() async {
-    final pickedFile =
-        await ImagePicker().getImage(source: ImageSource.gallery);
-    if (pickedFile != null) {
-      setState(() {
-        _profileImagePath = pickedFile.path;
-      });
     }
   }
 
@@ -88,6 +103,19 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
           key: _formKey,
           child: ListView(
             children: <Widget>[
+              GestureDetector(
+                onTap: _pickImage,
+                child: Container(
+                  height: 150,
+                  width: 150,
+                  color: Colors.grey[300],
+                  child: _profileImageBase64 == null
+                      ? Icon(Icons.camera_alt, size: 50)
+                      : Image.memory(base64Decode(_profileImageBase64!),
+                          fit: BoxFit.cover),
+                ),
+              ),
+              SizedBox(height: 16),
               TextFormField(
                 decoration: InputDecoration(labelText: 'ユーザー名'),
                 initialValue: _username,
@@ -113,14 +141,6 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                 onSaved: (value) {
                   _bio = value!;
                 },
-              ),
-              SizedBox(height: 10),
-              _profileImagePath != null
-                  ? Image.file(File(_profileImagePath!))
-                  : Icon(Icons.person, size: 100),
-              TextButton(
-                onPressed: _pickImage,
-                child: Text('アカウント画像を選択'),
               ),
               SizedBox(height: 20),
               _isLoading

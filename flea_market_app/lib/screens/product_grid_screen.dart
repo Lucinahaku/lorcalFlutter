@@ -1,9 +1,9 @@
-import 'package:flea_market_app/screens/login_screen.dart';
 import 'package:flutter/material.dart';
+import 'dart:io';
 import '../db_helper.dart';
 import '../models/product.dart';
-import '../widgets/product_card.dart'; // ProductCard ウィジェットをインポート
-import 'dart:io';
+import '../widgets/product_card.dart';
+import 'login_screen.dart';
 
 class ProductGridScreen extends StatelessWidget {
   final dbHelper = DatabaseHelper();
@@ -64,7 +64,7 @@ class ProductGridScreen extends StatelessWidget {
       body: Padding(
         padding: const EdgeInsets.all(8.0),
         child: FutureBuilder<List<Product>>(
-          future: dbHelper.fetchProducts(), // ここで適切なFutureを渡します
+          future: dbHelper.fetchProducts(),
           builder:
               (BuildContext context, AsyncSnapshot<List<Product>> snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {

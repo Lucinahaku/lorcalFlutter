@@ -11,7 +11,7 @@ class User extends HiveObject {
   late String email;
 
   @HiveField(2)
-  late String password;
+  String password = ''; // デフォルト値を設定
 
   @HiveField(3)
   late String profileImage;

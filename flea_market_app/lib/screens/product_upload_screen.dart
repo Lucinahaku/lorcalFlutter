@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
 import '../db_helper.dart';
 import '../models/product.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:io';
+import 'product_grid_screen.dart'; // ProductGridScreenをインポート
 
 class ProductUploadScreen extends StatefulWidget {
   @override
@@ -15,17 +17,26 @@ class _ProductUploadScreenState extends State<ProductUploadScreen> {
   String _productName = '';
   String _productDescription = '';
   double _productPrice = 0.0;
-  File? _image;
+  File? _imageFile;
   bool _isLoading = false;
 
   Future<void> _pickImage() async {
-    final pickedFile =
-        await ImagePicker().getImage(source: ImageSource.gallery);
+    final picker = ImagePicker();
+    final pickedFile = await picker.getImage(source: ImageSource.gallery);
+
     if (pickedFile != null) {
       setState(() {
-        _image = File(pickedFile.path);
+        _imageFile = File(pickedFile.path);
       });
     }
+  }
+
+  Future<String> _saveImage(File image) async {
+    final directory = await getApplicationDocumentsDirectory();
+    final path = directory.path;
+    final fileName = '${DateTime.now().millisecondsSinceEpoch}.png';
+    final newImage = await image.copy('$path/$fileName');
+    return newImage.path;
   }
 
   Future<void> _uploadProduct() async {
@@ -36,21 +47,21 @@ class _ProductUploadScreenState extends State<ProductUploadScreen> {
 
       final prefs = await SharedPreferences.getInstance();
       final email = prefs.getString('email');
-      if (email != null && _image != null) {
+      if (email != null && _imageFile != null) {
+        final imagePath = await _saveImage(_imageFile!);
+
         final product = Product()
           ..name = _productName
           ..description = _productDescription
           ..price = _productPrice
-          ..imageUrl = _image!.path
+          ..imageUrl = imagePath
           ..sellerEmail = email;
 
         await DatabaseHelper().insertProduct(product);
         _showSuccessDialog();
       }
 
-      setState(() {
-        _isLoading = false;
-      });
+      setState(() => _isLoading = false);
     }
   }
 
@@ -65,7 +76,10 @@ class _ProductUploadScreenState extends State<ProductUploadScreen> {
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop();
-                Navigator.of(context).pop(); // 出品ページを閉じて前の画面に戻る
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => ProductGridScreen()),
+                );
               },
               child: Text('OK'),
             ),
@@ -93,9 +107,9 @@ class _ProductUploadScreenState extends State<ProductUploadScreen> {
                   height: 150,
                   width: 150,
                   color: Colors.grey[300],
-                  child: _image == null
+                  child: _imageFile == null
                       ? Icon(Icons.camera_alt, size: 50)
-                      : Image.file(_image!, fit: BoxFit.cover),
+                      : Image.file(_imageFile!, fit: BoxFit.cover),
                 ),
               ),
               SizedBox(height: 16),
