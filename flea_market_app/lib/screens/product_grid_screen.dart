@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'dart:io';
 import '../db_helper.dart';
 import '../models/product.dart';
 import '../widgets/product_card.dart';
 import 'login_screen.dart';
+import 'dart:io';
 
 class ProductGridScreen extends StatelessWidget {
   final dbHelper = DatabaseHelper();
@@ -108,7 +108,8 @@ class ProductGridScreen extends StatelessWidget {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Image.file(File(product.imageUrl)),
+              Image.file(
+                  File(product.imageUrl)), // Use Image.file for file path
               SizedBox(height: 10),
               Text('価格: ¥${product.price.toStringAsFixed(0)}'),
             ],

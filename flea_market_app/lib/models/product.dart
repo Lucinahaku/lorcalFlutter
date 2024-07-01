@@ -18,4 +18,7 @@ class Product extends HiveObject {
 
   @HiveField(4)
   late String sellerEmail;
+
+  // Add this field
+  int get key => super.key as int;
 }

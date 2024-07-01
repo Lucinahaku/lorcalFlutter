@@ -11,6 +11,7 @@ import 'screens/personal_info_view_screen.dart';
 import 'screens/sales_management_screen.dart';
 import 'screens/purchase_history_screen.dart';
 import 'screens/chat_history_screen.dart';
+import 'screens/purchase_screen.dart'; // PurchaseScreenをインポート
 import 'db_helper.dart';
 
 void main() async {
@@ -52,6 +53,7 @@ class MyApp extends StatelessWidget {
         '/purchase_history': (context) => PurchaseHistoryScreen(),
         '/chat_history': (context) => ChatHistoryScreen(),
         '/product_upload': (context) => ProductUploadScreen(),
+        '/purchase': (context) => PurchaseScreen(productId: 0), // ここで適切な初期値を指定
       },
     );
   }
