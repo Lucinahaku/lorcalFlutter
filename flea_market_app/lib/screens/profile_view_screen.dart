@@ -4,6 +4,7 @@ import '../models/user.dart';
 import '../models/product.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert'; // Base64デコード用
+import 'dart:io';
 
 class ProfileViewScreen extends StatelessWidget {
   final dbHelper = DatabaseHelper();
@@ -132,20 +133,22 @@ class ProfileViewScreen extends StatelessWidget {
                               final product = products[index];
                               return Column(
                                 children: [
-                                  Image.memory(
-                                    base64Decode(product.imageUrl),
-                                    fit: BoxFit.cover,
-                                    width: 100,
-                                    height: 100,
-                                    errorBuilder: (context, error, stackTrace) {
-                                      // Base64デコードエラー処理
-                                      return Container(
-                                        width: 100,
-                                        height: 100,
-                                        color: Colors.grey,
-                                        child: Icon(Icons.broken_image),
-                                      );
-                                    },
+                                  Expanded(
+                                    child: Image.file(
+                                      File(product.imageUrl),
+                                      fit: BoxFit.cover,
+                                      width: 100,
+                                      errorBuilder:
+                                          (context, error, stackTrace) {
+                                        // Base64デコードエラー処理
+                                        return Container(
+                                          width: 100,
+                                          height: 100,
+                                          color: Colors.grey,
+                                          child: Icon(Icons.broken_image),
+                                        );
+                                      },
+                                    ),
                                   ),
                                   SizedBox(height: 4),
                                   Text('${product.price}¥'),
