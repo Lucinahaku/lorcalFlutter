@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:convert'; // Base64エンコード用
-import 'dart:io';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../db_helper.dart';
 import '../models/user.dart';
