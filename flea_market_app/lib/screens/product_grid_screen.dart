@@ -4,6 +4,7 @@ import '../models/product.dart';
 import '../widgets/product_card.dart';
 import 'login_screen.dart';
 import 'dart:io';
+import 'purchase_screen.dart'; // 購入画面をインポート
 
 class ProductGridScreen extends StatelessWidget {
   final dbHelper = DatabaseHelper();
@@ -112,6 +113,8 @@ class ProductGridScreen extends StatelessWidget {
                   File(product.imageUrl)), // Use Image.file for file path
               SizedBox(height: 10),
               Text('価格: ¥${product.price.toStringAsFixed(0)}'),
+              SizedBox(height: 10),
+              Text('説明: ${product.description}'),
             ],
           ),
           actions: <Widget>[
@@ -120,6 +123,20 @@ class ProductGridScreen extends StatelessWidget {
                 Navigator.of(context).pop();
               },
               child: Text('閉じる'),
+            ),
+            TextButton(
+              onPressed: () {
+                // 購入画面に遷移
+                Navigator.of(context).pop();
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        PurchaseScreen(productId: product.key),
+                  ),
+                );
+              },
+              child: Text('購入'),
             ),
           ],
         );
